@@ -1,5 +1,11 @@
 # ideas-cli
 
+## 0.1.3
+
+### Patch Changes
+
+- 18ef798: Silence dotenv v17 `[dotenv@…] injecting env` messages by passing `quiet: true` in `loadCliEnv()`.
+
 ## 0.1.2
 
 ### Patch Changes
