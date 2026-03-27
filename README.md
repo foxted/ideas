@@ -31,6 +31,16 @@ For broader design goals and a longer-term command list, see [`SPEC.md`](./SPEC.
 
 - Node.js 20+
 
+## Install from npm
+
+The package is published as **`ideas-cli`**. The [`ideas`](https://www.npmjs.com/package/ideas) name on npm belongs to another project, so this CLI is not installable as `npm install -g ideas`.
+
+```bash
+npm install -g ideas-cli
+```
+
+After install, the command you run is still **`ideas`** (see [Quick start](#quick-start)).
+
 ## Install (local / dev)
 
 ```bash
