@@ -1,0 +1,42 @@
+{
+  "name": "ideas-cli",
+  "version": "0.1.0",
+  "description": "Local-first ideas CLI with markdown storage and AI helpers",
+  "author": "Valentin Prugnaud <valentin@whatdafox.com>",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "ideas": "./dist/ideas.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/bin/ideas.ts",
+    "test": "vitest run",
+    "release": "changeset publish"
+  },
+  "dependencies": {
+    "@inquirer/select": "^5.1.2",
+    "ai": "^5.0.0",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "dotenv": "^17.3.1",
+    "gray-matter": "^4.0.3",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@types/node": "^22.10.0",
+    "strip-ansi": "^7.2.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

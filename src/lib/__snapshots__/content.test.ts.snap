@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatListTable > renders aligned columns with borders 1`] = `
+"┌───────────┬────────┬──────────────────────────────────────────────────┐
+│ id        │ stage  │ title                                            │
+├───────────┼────────┼──────────────────────────────────────────────────┤
+│ abc12     │ inbox  │ Short                                            │
+├───────────┼────────┼──────────────────────────────────────────────────┤
+│ xyz789012 │ drafts │ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA... │
+└───────────┴────────┴──────────────────────────────────────────────────┘"
+`;
