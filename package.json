@@ -1,6 +1,6 @@
 {
   "name": "ideas-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first ideas CLI with markdown storage and AI helpers",
   "author": "Valentin Prugnaud <valentin@whatdafox.com>",
   "license": "MIT",
