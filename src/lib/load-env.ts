@@ -18,7 +18,7 @@ export function loadCliEnv(): void {
   ];
   for (const path of paths) {
     if (existsSync(path)) {
-      config({ path, override: false });
+      config({ path, override: false, quiet: true });
     }
   }
 }
