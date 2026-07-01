@@ -1,5 +1,13 @@
 # ideas-cli
 
+## Unreleased
+
+### Minor Changes
+
+- Add tags to idea frontmatter, `ideas search`, and `ideas doctor`.
+- Add a copy-paste demo workflow to the README.
+- Add a `typecheck` script for strict TypeScript validation.
+
 ## 0.1.3
 
 ### Patch Changes
@@ -16,4 +24,4 @@
 
 ### Patch Changes
 
-- afd62ec: Initial public release: local-first markdown ideas under `~/.ideas`, AI helpers (`expand`, `rewrite`, `brainstorm`), and `ideas configure` for editor and models.
+- afd62ec: Initial public release: local-first markdown ideas under `~/.ideas`, AI helpers (`expand`, `rewrite`), and `ideas configure` for editor and models.

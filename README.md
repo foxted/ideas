@@ -6,14 +6,16 @@
 
 - **Stores ideas** under a configurable home directory (default `~/.ideas`) as `.md` files with YAML frontmatter (`id`, `title`, `slug`, `stage`, timestamps).
 - **Stages workflow**: each idea lives in **inbox** → **drafts** → **posts** (`promote` moves files between folders and updates frontmatter).
+- **Tags and search**: attach repeatable tags during capture, then search by text, stage, or tag.
 - **Lists and opens** ideas in a table; you can pass an id or use an interactive picker when stdin/stdout are a TTY.
+- **Health checks**: `ideas doctor` validates config, folders, editor availability, and optional AI setup.
 - **AI (optional)**: `expand` turns a rough note into a structured outline; `rewrite` improves clarity while preserving meaning. Both merge optional Markdown from `context/` into the prompt. `context build` prints or writes that merged context for inspection or reuse.
 
 ## How it works
 
 1. **Initialization** — `ideas init` creates `config/`, `inbox/`, `drafts/`, `posts/`, `context/`, `scratch/`, `templates/`, writes `config/config.json` (defaults for editor and AI model ids), and `config/models.json` (registry snapshot; reserved for future use).
 
-2. **Files** — New ideas are saved as `{id}-{slug}.md` in `inbox/`. The `id` is a 16-byte hex string. Bodies are Markdown after the frontmatter (parsed with [gray-matter](https://github.com/jonschlinkert/gray-matter)).
+2. **Files** — New ideas are saved as `{id}-{slug}.md` in `inbox/`. The `id` is a 16-byte hex string. Bodies are Markdown after the frontmatter (parsed with [gray-matter](https://github.com/jonschlinkert/gray-matter)). Tags are stored as a `tags` array in frontmatter.
 
 3. **Config** — `config.json` is validated with Zod. Paths like `~/.ideas` are expanded from the home directory. Override the root with `IDEAS_HOME` (used when resolving `config.json` location at bootstrap).
 
@@ -29,7 +31,7 @@ For broader design goals and a longer-term command list, see [`SPEC.md`](./SPEC.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 
 ## Install from npm
 
@@ -65,10 +67,50 @@ ideas --help
 
 ```bash
 ideas init
-ideas add "My first idea" --body "Some notes"
+ideas doctor
+ideas add "My first idea" --body "Some notes" --tag writing --tag oss
 ideas list
+ideas search "notes" --tag writing
 ideas promote <id>          # or: ideas promote   (interactive picker)
 ideas open <id>             # or: ideas open     (interactive picker)
+```
+
+## Demo
+
+Run this against a temporary ideas home so it does not touch your real notes:
+
+```bash
+export IDEAS_HOME="$(mktemp -d)"
+
+ideas init
+ideas doctor
+
+IDEA_ID="$(
+  ideas add "Local-first writing workflow" \
+    --body "A tiny CLI that captures rough notes, adds context, and turns them into publishable drafts." \
+    --tag writing \
+    --tag ai \
+    --tag oss
+)"
+
+ideas list
+ideas search "publishable" --tag ai
+ideas promote "$IDEA_ID"
+ideas list
+```
+
+Expected shape:
+
+```text
+Initialized ideas at /tmp/tmp...
+ok IDEAS_HOME: /tmp/tmp... (/tmp/tmp...)
+ok config: /tmp/tmp.../config/config.json
+...
+┌──────────────────────────────────┬────────┬──────────────────────────────┬──────────────────┐
+│ id                               │ stage  │ title                        │ tags             │
+├──────────────────────────────────┼────────┼──────────────────────────────┼──────────────────┤
+│ ...                              │ inbox  │ Local-first writing workflow │ writing, ai, oss │
+└──────────────────────────────────┴────────┴──────────────────────────────┴──────────────────┘
 ```
 
 ## AI commands
@@ -103,6 +145,7 @@ Optional context files: `~/.ideas/context/profile.md`, `voice.md`, `themes.md`, 
 | `npm run build` | Bundle CLI with tsup (`dist/ideas.js`) |
 | `npm run dev` | Run CLI with tsx (`src/bin/ideas.ts`) |
 | `npm test` | Vitest |
+| `npm run typecheck` | TypeScript strict-mode check |
 | `npm run release` | changeset publish |
 
 ## Layout

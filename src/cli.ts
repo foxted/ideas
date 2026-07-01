@@ -1,14 +1,51 @@
+import { createRequire } from "node:module";
+
 import { Command } from "commander";
 
 import { runConfigure } from "./commands/configure.js";
 import { runContextBuild } from "./commands/context-build.js";
+import { runDoctor } from "./commands/doctor.js";
 import { runExpand } from "./commands/expand.js";
 import { runInit } from "./commands/init.js";
 import { runOpen } from "./commands/open.js";
 import { runRewrite } from "./commands/rewrite.js";
-import { addIdea, formatListTable, listIdeas, promoteIdea } from "./lib/content.js";
+import {
+  addIdea,
+  formatListTable,
+  listIdeas,
+  promoteIdea,
+  searchIdeas,
+  validStages,
+} from "./lib/content.js";
 import { loadConfig } from "./lib/config.js";
 import { resolveIdeaId } from "./lib/select-idea.js";
+import type { Stage } from "./lib/content.js";
+
+const requirePackageJson = createRequire(import.meta.url);
+
+function packageVersion(): string {
+  const packageJson = requirePackageJson("../package.json") as unknown;
+  if (
+    packageJson &&
+    typeof packageJson === "object" &&
+    "version" in packageJson &&
+    typeof packageJson.version === "string"
+  ) {
+    return packageJson.version;
+  }
+  return "0.0.0";
+}
+
+function collectValues(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function parseStage(value: string): Stage {
+  if (validStages.includes(value as Stage)) {
+    return value as Stage;
+  }
+  throw new Error(`Invalid stage "${value}". Expected one of: ${validStages.join(", ")}`);
+}
 
 async function requireConfig() {
   try {
@@ -24,7 +61,7 @@ async function requireConfig() {
 
 export async function runCli(argv: string[]): Promise<void> {
   const program = new Command();
-  program.name("ideas").description("Local-first ideas CLI").version("0.1.0");
+  program.name("ideas").description("Local-first ideas CLI").version(packageVersion());
 
   program
     .command("init")
@@ -52,9 +89,10 @@ export async function runCli(argv: string[]): Promise<void> {
     .description("Add an idea to the inbox")
     .argument("<title>", "Idea title")
     .option("--body <text>", "Markdown body")
-    .action(async (title: string, opts: { body?: string }) => {
+    .option("--tag <tag>", "Tag to add (repeatable)", collectValues, [])
+    .action(async (title: string, opts: { body?: string; tag: string[] }) => {
       const config = await requireConfig();
-      const id = await addIdea(config, title, opts.body ?? "");
+      const id = await addIdea(config, title, opts.body ?? "", { tags: opts.tag });
       console.log(id);
     });
 
@@ -64,6 +102,22 @@ export async function runCli(argv: string[]): Promise<void> {
     .action(async () => {
       const config = await requireConfig();
       const ideas = await listIdeas(config);
+      console.log(formatListTable(ideas));
+    });
+
+  program
+    .command("search")
+    .description("Search ideas by text, stage, and tags")
+    .argument("[query]", "Text to search in title, body, id, slug, stage, and tags")
+    .option("--stage <stage>", "Filter by stage: inbox, drafts, or posts")
+    .option("--tag <tag>", "Filter by tag (repeatable)", collectValues, [])
+    .action(async (query: string | undefined, opts: { stage?: string; tag: string[] }) => {
+      const config = await requireConfig();
+      const ideas = await searchIdeas(config, {
+        query,
+        stage: opts.stage ? parseStage(opts.stage) : undefined,
+        tags: opts.tag,
+      });
       console.log(formatListTable(ideas));
     });
 
@@ -120,6 +174,16 @@ export async function runCli(argv: string[]): Promise<void> {
     .action(async (opts: { source?: string; output?: string }) => {
       const config = await requireConfig();
       await runContextBuild(config, { source: opts.source, output: opts.output });
+    });
+
+  program
+    .command("doctor")
+    .description("Check config, folders, editor, and optional AI setup")
+    .action(async () => {
+      const ok = await runDoctor();
+      if (!ok) {
+        process.exitCode = 1;
+      }
     });
 
   await program.parseAsync(argv);

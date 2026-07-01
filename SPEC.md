@@ -27,7 +27,7 @@ All data is stored locally under `~/.ideas` using markdown files with YAML front
 
 ## Tech Stack
 
-- Node.js (>=20)
+- Node.js (>=22)
 - TypeScript (ESM)
 - CLI: `commander` or `cac`
 - AI: `ai` (Vercel AI SDK)
@@ -64,13 +64,18 @@ All data is stored locally under `~/.ideas` using markdown files with YAML front
 - list
 - open
 - promote
-- move
 - search
+- doctor
+
+### Planned core
+- move
 
 ### AI
-- brainstorm
 - expand
 - rewrite
+
+### Planned AI
+- brainstorm
 - repurpose
 - summarize
 - classify
