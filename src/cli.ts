@@ -1,14 +1,60 @@
+import { createRequire } from "node:module";
+
 import { Command } from "commander";
 
 import { runConfigure } from "./commands/configure.js";
 import { runContextBuild } from "./commands/context-build.js";
+import { runDoctor } from "./commands/doctor.js";
 import { runExpand } from "./commands/expand.js";
 import { runInit } from "./commands/init.js";
 import { runOpen } from "./commands/open.js";
 import { runRewrite } from "./commands/rewrite.js";
-import { addIdea, formatListTable, listIdeas, promoteIdea } from "./lib/content.js";
+import { runTag } from "./commands/tag.js";
+import {
+  addIdea,
+  formatListTable,
+  listIdeas,
+  promoteIdea,
+  searchIdeas,
+  validStages,
+} from "./lib/content.js";
 import { loadConfig } from "./lib/config.js";
 import { resolveIdeaId } from "./lib/select-idea.js";
+import type { Stage } from "./lib/content.js";
+
+const requirePackageJson = createRequire(import.meta.url);
+
+function packageVersion(): string {
+  const packageJson = requirePackageJson("../package.json") as unknown;
+  if (
+    packageJson &&
+    typeof packageJson === "object" &&
+    "version" in packageJson &&
+    typeof packageJson.version === "string"
+  ) {
+    return packageJson.version;
+  }
+  return "0.0.0";
+}
+
+function collectValues(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function parseStage(value: string): Stage {
+  if (validStages.includes(value as Stage)) {
+    return value as Stage;
+  }
+  throw new Error(`Invalid stage "${value}". Expected one of: ${validStages.join(", ")}`);
+}
+
+function parseMaxTags(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error("--max must be a positive integer");
+  }
+  return parsed;
+}
 
 async function requireConfig() {
   try {
@@ -23,8 +69,9 @@ async function requireConfig() {
 }
 
 export async function runCli(argv: string[]): Promise<void> {
+  const normalizedArgv = argv[2] === "--" ? [argv[0], argv[1], ...argv.slice(3)] : argv;
   const program = new Command();
-  program.name("ideas").description("Local-first ideas CLI").version("0.1.0");
+  program.name("ideas").description("Local-first ideas CLI").version(packageVersion());
 
   program
     .command("init")
@@ -39,22 +86,33 @@ export async function runCli(argv: string[]): Promise<void> {
     .option("--editor <command>", "Editor command (e.g. code, vim)")
     .option("--model-expand <id>", "Model id for expand (AI Gateway)")
     .option("--model-rewrite <id>", "Model id for rewrite (AI Gateway)")
-    .action(async (opts: { editor?: string; modelExpand?: string; modelRewrite?: string }) => {
-      if (!opts.editor && !opts.modelExpand && !opts.modelRewrite) {
-        throw new Error("Provide at least one of --editor, --model-expand, --model-rewrite");
-      }
-      const config = await requireConfig();
-      await runConfigure(config, opts);
-    });
+    .option("--model-tag <id>", "Model id for tag (AI Gateway)")
+    .action(
+      async (opts: {
+        editor?: string;
+        modelExpand?: string;
+        modelRewrite?: string;
+        modelTag?: string;
+      }) => {
+        if (!opts.editor && !opts.modelExpand && !opts.modelRewrite && !opts.modelTag) {
+          throw new Error(
+            "Provide at least one of --editor, --model-expand, --model-rewrite, --model-tag",
+          );
+        }
+        const config = await requireConfig();
+        await runConfigure(config, opts);
+      },
+    );
 
   program
     .command("add")
     .description("Add an idea to the inbox")
     .argument("<title>", "Idea title")
     .option("--body <text>", "Markdown body")
-    .action(async (title: string, opts: { body?: string }) => {
+    .option("--tag <tag>", "Tag to add (repeatable)", collectValues, [])
+    .action(async (title: string, opts: { body?: string; tag: string[] }) => {
       const config = await requireConfig();
-      const id = await addIdea(config, title, opts.body ?? "");
+      const id = await addIdea(config, title, opts.body ?? "", { tags: opts.tag });
       console.log(id);
     });
 
@@ -64,6 +122,22 @@ export async function runCli(argv: string[]): Promise<void> {
     .action(async () => {
       const config = await requireConfig();
       const ideas = await listIdeas(config);
+      console.log(formatListTable(ideas));
+    });
+
+  program
+    .command("search")
+    .description("Search ideas by text, stage, and tags")
+    .argument("[query]", "Text to search in title, body, id, slug, stage, and tags")
+    .option("--stage <stage>", "Filter by stage: inbox, drafts, or posts")
+    .option("--tag <tag>", "Filter by tag (repeatable)", collectValues, [])
+    .action(async (query: string | undefined, opts: { stage?: string; tag: string[] }) => {
+      const config = await requireConfig();
+      const ideas = await searchIdeas(config, {
+        query,
+        stage: opts.stage ? parseStage(opts.stage) : undefined,
+        tags: opts.tag,
+      });
       console.log(formatListTable(ideas));
     });
 
@@ -110,6 +184,28 @@ export async function runCli(argv: string[]): Promise<void> {
       await runRewrite(config, resolved, { write: opts.write });
     });
 
+  program
+    .command("tag")
+    .description("Suggest tags for an idea with AI (stdout unless --write)")
+    .argument("[id]", "Idea id (interactive picker if omitted)")
+    .option("--write", "Merge suggested tags into the idea frontmatter")
+    .option("--replace", "Replace existing tags when used with --write")
+    .option("--max <count>", "Maximum number of tags to suggest", parseMaxTags)
+    .action(
+      async (
+        id: string | undefined,
+        opts: { write?: boolean; replace?: boolean; max?: number },
+      ) => {
+        const config = await requireConfig();
+        const resolved = await resolveIdeaId(config, id);
+        await runTag(config, resolved, {
+          max: opts.max,
+          replace: opts.replace,
+          write: opts.write,
+        });
+      },
+    );
+
   const context = program.command("context").description("Context helpers");
 
   context
@@ -122,5 +218,24 @@ export async function runCli(argv: string[]): Promise<void> {
       await runContextBuild(config, { source: opts.source, output: opts.output });
     });
 
-  await program.parseAsync(argv);
+  program
+    .command("doctor")
+    .description("Check config, folders, editor, and optional AI setup")
+    .action(async () => {
+      const ok = await runDoctor();
+      if (!ok) {
+        process.exitCode = 1;
+      }
+    });
+
+  if (
+    normalizedArgv.length <= 2 ||
+    (normalizedArgv.length === 3 &&
+      (normalizedArgv[2] === "--help" || normalizedArgv[2] === "-h"))
+  ) {
+    program.outputHelp();
+    return;
+  }
+
+  await program.parseAsync(normalizedArgv);
 }

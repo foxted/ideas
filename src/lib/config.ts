@@ -15,6 +15,7 @@ const defaultModels = {
   brainstorm: "openai/gpt-5.4",
   expand: "anthropic/claude-sonnet-4.6",
   rewrite: "openai/gpt-5.4",
+  tag: "openai/gpt-5.4",
 } as const;
 
 export const configSchema = z.object({
@@ -27,6 +28,7 @@ export const configSchema = z.object({
           brainstorm: z.string().optional(),
           expand: z.string().optional(),
           rewrite: z.string().optional(),
+          tag: z.string().optional(),
         })
         .default({}),
     })

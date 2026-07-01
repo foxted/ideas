@@ -5,6 +5,7 @@ export const ideaFrontmatterSchema = z.object({
   title: z.string(),
   slug: z.string(),
   stage: z.enum(["inbox", "drafts", "posts"]),
+  tags: z.array(z.string()).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

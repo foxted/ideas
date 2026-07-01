@@ -15,6 +15,22 @@ import { slugify } from "./slug.js";
 const stages = ["inbox", "drafts", "posts"] as const;
 export type Stage = (typeof stages)[number];
 
+export const validStages: readonly Stage[] = stages;
+
+export interface AddIdeaOptions {
+  tags?: string[];
+}
+
+export interface SearchIdeasOptions {
+  query?: string;
+  stage?: Stage;
+  tags?: string[];
+}
+
+export interface UpdateIdeaTagsOptions {
+  replace?: boolean;
+}
+
 function parseFrontmatter(data: unknown): IdeaFrontmatter {
   return ideaFrontmatterSchema.parse(data);
 }
@@ -23,10 +39,29 @@ function ideaFileName(id: string, slug: string): string {
   return `${id}-${slug}.md`;
 }
 
+export function normalizeTags(tags: readonly string[] = []): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const tag of tags) {
+    const clean = tag
+      .trim()
+      .toLowerCase()
+      .replace(/^#/, "")
+      .replace(/\s+/g, "-");
+    if (!clean || seen.has(clean)) {
+      continue;
+    }
+    seen.add(clean);
+    normalized.push(clean);
+  }
+  return normalized;
+}
+
 export async function addIdea(
   config: IdeasConfig,
   title: string,
   body: string,
+  options: AddIdeaOptions = {},
 ): Promise<string> {
   const inbox = stageDir(config.rootDir, "inbox");
   await ensureDir(inbox);
@@ -39,6 +74,7 @@ export async function addIdea(
     title: title.trim() || "Untitled",
     slug,
     stage: "inbox",
+    tags: normalizeTags(options.tags),
     createdAt: now,
     updatedAt: now,
   };
@@ -88,6 +124,45 @@ export async function findIdeaById(config: IdeasConfig, id: string): Promise<Ide
   const ideas = await listIdeas(config);
   const found = ideas.find((i) => i.frontmatter.id === id);
   return found ?? null;
+}
+
+export async function searchIdeas(
+  config: IdeasConfig,
+  options: SearchIdeasOptions,
+): Promise<IdeaDocument[]> {
+  const ideas = await listIdeas(config);
+  const query = options.query?.trim().toLowerCase();
+  const tags = normalizeTags(options.tags);
+
+  return ideas.filter((idea) => {
+    if (options.stage && idea.frontmatter.stage !== options.stage) {
+      return false;
+    }
+
+    if (tags.length > 0) {
+      const ideaTags = new Set(idea.frontmatter.tags);
+      if (!tags.every((tag) => ideaTags.has(tag))) {
+        return false;
+      }
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    const searchable = [
+      idea.frontmatter.id,
+      idea.frontmatter.title,
+      idea.frontmatter.slug,
+      idea.frontmatter.stage,
+      idea.frontmatter.tags.join(" "),
+      idea.body,
+    ]
+      .join("\n")
+      .toLowerCase();
+
+    return searchable.includes(query);
+  });
 }
 
 const nextStage: Record<Stage, Stage | null> = {
@@ -156,6 +231,7 @@ export function formatListTable(ideas: IdeaDocument[]): string {
       chalk.bold.cyan("id"),
       chalk.bold.cyan("stage"),
       chalk.bold.cyan("title"),
+      chalk.bold.cyan("tags"),
     ],
     wordWrap: false,
     style: {
@@ -164,9 +240,14 @@ export function formatListTable(ideas: IdeaDocument[]): string {
     },
   });
   for (const i of ideas) {
-    const { id, title, stage } = i.frontmatter;
+    const { id, title, stage, tags } = i.frontmatter;
     const t = title.length > 48 ? `${title.slice(0, 45)}...` : title;
-    table.push([chalk.bold.white(id), formatStageLabel(stage), chalk.dim(t)]);
+    table.push([
+      chalk.bold.white(id),
+      formatStageLabel(stage),
+      chalk.dim(t),
+      chalk.dim(tags.join(", ")),
+    ]);
   }
   return table.toString();
 }
@@ -176,4 +257,20 @@ export async function updateIdeaBody(doc: IdeaDocument, newBody: string): Promis
   const fm: IdeaFrontmatter = { ...doc.frontmatter, updatedAt: now };
   const fileContent = matter.stringify(newBody.trimEnd() ? `${newBody.trimEnd()}\n` : "\n", fm);
   await fs.writeFile(doc.filePath, fileContent, "utf8");
+}
+
+export async function updateIdeaTags(
+  doc: IdeaDocument,
+  tags: readonly string[],
+  options: UpdateIdeaTagsOptions = {},
+): Promise<string[]> {
+  const normalizedTags = normalizeTags(tags);
+  const nextTags = options.replace
+    ? normalizedTags
+    : normalizeTags([...doc.frontmatter.tags, ...normalizedTags]);
+  const now = new Date().toISOString();
+  const fm: IdeaFrontmatter = { ...doc.frontmatter, tags: nextTags, updatedAt: now };
+  const fileContent = matter.stringify(doc.body.trimEnd() ? `${doc.body.trimEnd()}\n` : "\n", fm);
+  await fs.writeFile(doc.filePath, fileContent, "utf8");
+  return nextTags;
 }
