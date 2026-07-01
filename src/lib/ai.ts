@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import type { IdeasConfig } from "./config.js";
 import { getModelForTask } from "./config.js";
 
-export type AiTask = "expand" | "rewrite";
+export type AiTask = "expand" | "rewrite" | "tag";
 
 function requireGatewayKey(): string {
   const key = process.env.AI_GATEWAY_API_KEY;

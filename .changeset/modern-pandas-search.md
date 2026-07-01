@@ -2,4 +2,4 @@
 "ideas-cli": minor
 ---
 
-Add tags, search, doctor checks, and a README demo workflow.
+Add tags, search, AI tag suggestions, doctor checks, and a README demo workflow.

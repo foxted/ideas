@@ -36,6 +36,7 @@ export async function runInit(): Promise<void> {
     brainstorm: "openai/gpt-5.4",
     expand: "anthropic/claude-sonnet-4.6",
     rewrite: "openai/gpt-5.4",
+    tag: "openai/gpt-5.4",
   });
 
   console.log(`Initialized ideas at ${root}`);

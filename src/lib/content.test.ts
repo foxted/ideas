@@ -5,7 +5,15 @@ import path from "node:path";
 import stripAnsi from "strip-ansi";
 import { describe, expect, it } from "vitest";
 
-import { addIdea, formatListTable, listIdeas, normalizeTags, searchIdeas } from "./content.js";
+import {
+  addIdea,
+  findIdeaById,
+  formatListTable,
+  listIdeas,
+  normalizeTags,
+  searchIdeas,
+  updateIdeaTags,
+} from "./content.js";
 import type { IdeasConfig } from "./config.js";
 import type { IdeaDocument } from "./idea.js";
 
@@ -109,5 +117,31 @@ describe("ideas storage and search", () => {
 
     const tagMatches = await searchIdeas(config, { tags: ["demo"], stage: "inbox" });
     expect(tagMatches.map((idea) => idea.frontmatter.title)).toEqual(["Portfolio demo"]);
+  });
+
+  it("updates tags by merging or replacing frontmatter", async () => {
+    const config = await tempConfig();
+    const id = await addIdea(config, "Taggable idea", "Keep this body.", {
+      tags: ["existing"],
+    });
+    const doc = await findIdeaById(config, id);
+    expect(doc).not.toBeNull();
+    if (!doc) {
+      return;
+    }
+
+    const merged = await updateIdeaTags(doc, ["AI", "existing"]);
+    expect(merged).toEqual(["existing", "ai"]);
+
+    const updated = await findIdeaById(config, id);
+    expect(updated?.frontmatter.tags).toEqual(["existing", "ai"]);
+    expect(updated?.body.trim()).toBe("Keep this body.");
+
+    if (!updated) {
+      return;
+    }
+    const replaced = await updateIdeaTags(updated, ["writing"], { replace: true });
+    expect(replaced).toEqual(["writing"]);
+    expect((await findIdeaById(config, id))?.frontmatter.tags).toEqual(["writing"]);
   });
 });

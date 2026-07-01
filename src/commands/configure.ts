@@ -5,6 +5,7 @@ export interface ConfigureOptions {
   editor?: string;
   modelExpand?: string;
   modelRewrite?: string;
+  modelTag?: string;
 }
 
 export async function runConfigure(config: IdeasConfig, options: ConfigureOptions): Promise<void> {
@@ -16,6 +17,9 @@ export async function runConfigure(config: IdeasConfig, options: ConfigureOption
   }
   if (options.modelRewrite) {
     config.ai.models.rewrite = options.modelRewrite;
+  }
+  if (options.modelTag) {
+    config.ai.models.tag = options.modelTag;
   }
   await saveConfig(config);
   console.log("Saved configuration.");

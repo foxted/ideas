@@ -9,7 +9,7 @@
 - **Tags and search**: attach repeatable tags during capture, then search by text, stage, or tag.
 - **Lists and opens** ideas in a table; you can pass an id or use an interactive picker when stdin/stdout are a TTY.
 - **Health checks**: `ideas doctor` validates config, folders, editor availability, and optional AI setup.
-- **AI (optional)**: `expand` turns a rough note into a structured outline; `rewrite` improves clarity while preserving meaning. Both merge optional Markdown from `context/` into the prompt. `context build` prints or writes that merged context for inspection or reuse.
+- **AI (optional)**: `expand` turns a rough note into a structured outline; `rewrite` improves clarity while preserving meaning; `tag` suggests reusable tags and can write them to frontmatter. AI commands merge optional Markdown from `context/` into the prompt. `context build` prints or writes that merged context for inspection or reuse.
 
 ## How it works
 
@@ -118,7 +118,7 @@ ok config: /tmp/tmp.../config/config.json
 Set `AI_GATEWAY_API_KEY` (from the [Vercel dashboard](https://vercel.com/) for AI Gateway). Optionally pin models:
 
 ```bash
-ideas configure --model-expand openai/gpt-5.4 --model-rewrite openai/gpt-5.4
+ideas configure --model-expand openai/gpt-5.4 --model-rewrite openai/gpt-5.4 --model-tag openai/gpt-5.4
 ```
 
 ```bash
@@ -126,6 +126,9 @@ ideas expand <id>           # print to stdout
 ideas expand <id> --write # replace idea body with output
 ideas rewrite <id>
 ideas rewrite <id> --write
+ideas tag <id>              # print suggested tags
+ideas tag <id> --write      # merge suggested tags into frontmatter
+ideas tag <id> --write --replace --max 3
 ideas context build --source path/to/file.md -o /tmp/context.md
 ```
 

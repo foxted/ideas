@@ -73,6 +73,7 @@ All data is stored locally under `~/.ideas` using markdown files with YAML front
 ### AI
 - expand
 - rewrite
+- tag
 
 ### Planned AI
 - brainstorm

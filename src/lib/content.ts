@@ -27,6 +27,10 @@ export interface SearchIdeasOptions {
   tags?: string[];
 }
 
+export interface UpdateIdeaTagsOptions {
+  replace?: boolean;
+}
+
 function parseFrontmatter(data: unknown): IdeaFrontmatter {
   return ideaFrontmatterSchema.parse(data);
 }
@@ -253,4 +257,20 @@ export async function updateIdeaBody(doc: IdeaDocument, newBody: string): Promis
   const fm: IdeaFrontmatter = { ...doc.frontmatter, updatedAt: now };
   const fileContent = matter.stringify(newBody.trimEnd() ? `${newBody.trimEnd()}\n` : "\n", fm);
   await fs.writeFile(doc.filePath, fileContent, "utf8");
+}
+
+export async function updateIdeaTags(
+  doc: IdeaDocument,
+  tags: readonly string[],
+  options: UpdateIdeaTagsOptions = {},
+): Promise<string[]> {
+  const normalizedTags = normalizeTags(tags);
+  const nextTags = options.replace
+    ? normalizedTags
+    : normalizeTags([...doc.frontmatter.tags, ...normalizedTags]);
+  const now = new Date().toISOString();
+  const fm: IdeaFrontmatter = { ...doc.frontmatter, tags: nextTags, updatedAt: now };
+  const fileContent = matter.stringify(doc.body.trimEnd() ? `${doc.body.trimEnd()}\n` : "\n", fm);
+  await fs.writeFile(doc.filePath, fileContent, "utf8");
+  return nextTags;
 }

@@ -5,6 +5,7 @@
 ### Minor Changes
 
 - Add tags to idea frontmatter, `ideas search`, and `ideas doctor`.
+- Add `ideas tag` to suggest and optionally write tags with AI.
 - Add a copy-paste demo workflow to the README.
 - Add a `typecheck` script for strict TypeScript validation.
 

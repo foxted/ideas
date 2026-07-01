@@ -9,6 +9,7 @@ import { runExpand } from "./commands/expand.js";
 import { runInit } from "./commands/init.js";
 import { runOpen } from "./commands/open.js";
 import { runRewrite } from "./commands/rewrite.js";
+import { runTag } from "./commands/tag.js";
 import {
   addIdea,
   formatListTable,
@@ -47,6 +48,14 @@ function parseStage(value: string): Stage {
   throw new Error(`Invalid stage "${value}". Expected one of: ${validStages.join(", ")}`);
 }
 
+function parseMaxTags(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error("--max must be a positive integer");
+  }
+  return parsed;
+}
+
 async function requireConfig() {
   try {
     return await loadConfig();
@@ -76,13 +85,23 @@ export async function runCli(argv: string[]): Promise<void> {
     .option("--editor <command>", "Editor command (e.g. code, vim)")
     .option("--model-expand <id>", "Model id for expand (AI Gateway)")
     .option("--model-rewrite <id>", "Model id for rewrite (AI Gateway)")
-    .action(async (opts: { editor?: string; modelExpand?: string; modelRewrite?: string }) => {
-      if (!opts.editor && !opts.modelExpand && !opts.modelRewrite) {
-        throw new Error("Provide at least one of --editor, --model-expand, --model-rewrite");
-      }
-      const config = await requireConfig();
-      await runConfigure(config, opts);
-    });
+    .option("--model-tag <id>", "Model id for tag (AI Gateway)")
+    .action(
+      async (opts: {
+        editor?: string;
+        modelExpand?: string;
+        modelRewrite?: string;
+        modelTag?: string;
+      }) => {
+        if (!opts.editor && !opts.modelExpand && !opts.modelRewrite && !opts.modelTag) {
+          throw new Error(
+            "Provide at least one of --editor, --model-expand, --model-rewrite, --model-tag",
+          );
+        }
+        const config = await requireConfig();
+        await runConfigure(config, opts);
+      },
+    );
 
   program
     .command("add")
@@ -163,6 +182,28 @@ export async function runCli(argv: string[]): Promise<void> {
       const resolved = await resolveIdeaId(config, id);
       await runRewrite(config, resolved, { write: opts.write });
     });
+
+  program
+    .command("tag")
+    .description("Suggest tags for an idea with AI (stdout unless --write)")
+    .argument("[id]", "Idea id (interactive picker if omitted)")
+    .option("--write", "Merge suggested tags into the idea frontmatter")
+    .option("--replace", "Replace existing tags when used with --write")
+    .option("--max <count>", "Maximum number of tags to suggest", parseMaxTags)
+    .action(
+      async (
+        id: string | undefined,
+        opts: { write?: boolean; replace?: boolean; max?: number },
+      ) => {
+        const config = await requireConfig();
+        const resolved = await resolveIdeaId(config, id);
+        await runTag(config, resolved, {
+          max: opts.max,
+          replace: opts.replace,
+          write: opts.write,
+        });
+      },
+    );
 
   const context = program.command("context").description("Context helpers");
 
