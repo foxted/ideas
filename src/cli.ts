@@ -186,5 +186,10 @@ export async function runCli(argv: string[]): Promise<void> {
       }
     });
 
+  if (argv.length <= 2) {
+    program.outputHelp();
+    return;
+  }
+
   await program.parseAsync(argv);
 }
