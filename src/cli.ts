@@ -69,6 +69,7 @@ async function requireConfig() {
 }
 
 export async function runCli(argv: string[]): Promise<void> {
+  const normalizedArgv = argv[2] === "--" ? [argv[0], argv[1], ...argv.slice(3)] : argv;
   const program = new Command();
   program.name("ideas").description("Local-first ideas CLI").version(packageVersion());
 
@@ -227,10 +228,14 @@ export async function runCli(argv: string[]): Promise<void> {
       }
     });
 
-  if (argv.length <= 2) {
+  if (
+    normalizedArgv.length <= 2 ||
+    (normalizedArgv.length === 3 &&
+      (normalizedArgv[2] === "--help" || normalizedArgv[2] === "-h"))
+  ) {
     program.outputHelp();
     return;
   }
 
-  await program.parseAsync(argv);
+  await program.parseAsync(normalizedArgv);
 }
